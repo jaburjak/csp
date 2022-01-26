@@ -118,11 +118,14 @@ def solve_model(demands, parent_width=100, verbose=False):
   '''
   Book Author's note from page 201:
 
-  There are alternative objective functions. For example, we could have minimized the sum of the waste. This makes sense, especially if the demand constraint is formulated as an inequality. Then minimizing the sum of waste Chapter 7  advanCed teChniques
-  will spend more CPU cycles trying to find more efficient patterns that over-satisfy demand. This is especially good if the demand widths recur regularly and storing cut rolls in inventory to satisfy future demand is possible. Note that the running time will grow quickly with such an objective function
+  There are alternative objective functions. For example, we could have minimized the sum of the waste. This makes
+  sense, especially if the demand constraint is formulated as an inequality. Then minimizing the sum of waste will
+  spend more CPU cycles trying to find more efficient patterns that over-satisfy demand. This is especially good if
+  the demand widths recur regularly and storing cut rolls in inventory to satisfy future demand is possible. Note that
+  the running time will grow quickly with such an objective function
   '''
 
-  Cost = solver.Sum((j+1)*y[j] for j in range(k[1]))
+  Cost = solver.Sum((j+1+1)*y[j]+(j+1)*(1-unused_widths[j]/parent_width) for j in range(k[1]))
 
   solver.Minimize(Cost)
 

@@ -7,11 +7,9 @@ Updated by: Jakub Jabůrek
 '''
 from ortools.linear_solver import pywraplp
 from math import ceil
-from random import randint
 import json
 from read_lengths import get_data
 import typer
-from typing import Optional
 
 def newSolver(name,integer=False):
   return pywraplp.Solver(name,\
@@ -35,15 +33,7 @@ def ObjVal(x):
   return x.Objective().Value()
 
 
-def gen_data(num_orders):
-    R=[] # small rolls
-    # S=0 # seed?
-    for i in range(num_orders):
-        R.append([randint(1,12), randint(5,40)])
-    return R
-
-
-def solve_model(demands, parent_width=100):
+def solve_model(demands, parent_width=100, verbose=False):
   '''
       demands = [
           [1, 3], # [quantity, width]
@@ -55,7 +45,7 @@ def solve_model(demands, parent_width=100):
   '''
   num_orders = len(demands)
   solver = newSolver('Cutting Stock', True)
-  k,b  = bounds(demands, parent_width)
+  k,b  = bounds(demands, parent_width, verbose)
 
   # array of boolean declared as int, if y[i] is 1, 
   # then y[i] Big roll is used, else it was not used
@@ -142,10 +132,9 @@ def solve_model(demands, parent_width=100):
   return status, \
     numRollsUsed, \
     rolls(numRollsUsed, SolVal(x), SolVal(unused_widths), demands), \
-    SolVal(unused_widths), \
-    solver.WallTime()
+    SolVal(unused_widths)
 
-def bounds(demands, parent_width=100):
+def bounds(demands, parent_width=100, verbose=False):
   '''
   b = [sum of widths of individual small rolls of each order]
   T = local var. stores sum of widths of adjecent small-rolls. When the width reaches 100%, T is set to 0 again.
@@ -180,8 +169,9 @@ def bounds(demands, parent_width=100):
           k[1],T = k[1]+1, 0 # use next roll (k[1] += 1)
   k[0] = int(round(TT/parent_width+0.5))
 
-  print('k', k)
-  print('b', b)
+  if verbose:
+    print('k', k)
+    print('b', b)
 
   return k, b
 
@@ -215,7 +205,7 @@ def rolls(nb, x, w, demands):
 '''
 this model starts with some patterns and then optimizes those patterns
 '''
-def solve_large_model(demands, parent_width=100):
+def solve_large_model(demands, parent_width=100, verbose=False):
   num_orders = len(demands)
   iter = 0
   patterns = get_initial_patterns(demands)
@@ -223,7 +213,8 @@ def solve_large_model(demands, parent_width=100):
 
   # list quantities of orders
   quantities = [demands[i][0] for i in range(num_orders)]
-  print('quantities', quantities)
+  if verbose:
+    print('quantities', quantities)
 
   while iter < 20:
     status, y, l = solve_master(patterns, quantities, parent_width=parent_width)
@@ -357,8 +348,7 @@ def checkWidths(demands, parent_width):
             list of lists, each containing quantity & width of rod / roll to cut from
             e.g.: [ [quantity, width], [quantity, width], ...]
 '''
-def StockCutter1D(child_rolls, parent_rolls, output_json=True, large_model=True):
-
+def StockCutter1D(child_rolls, parent_rolls, verbose=False, large_model=False):
   # at the moment, only parent one width of parent rolls is supported
   # quantity of parent rolls is calculated by algorithm, so user supplied quantity doesn't matter?
   # TODO: or we can check and tell the user the user when parent roll quantity is insufficient
@@ -367,24 +357,27 @@ def StockCutter1D(child_rolls, parent_rolls, output_json=True, large_model=True)
   if not checkWidths(demands=child_rolls, parent_width=parent_width):
     return []
 
-
-  print('child_rolls', child_rolls)
-  print('parent_rolls', parent_rolls)
+  if verbose:
+    print('child_rolls:', child_rolls)
+    print('parent_rolls:', parent_rolls)
 
   if not large_model:
-    print('Running Small Model...')
-    status, numRollsUsed, consumed_big_rolls, unused_roll_widths, wall_time = \
-              solve_model(demands=child_rolls, parent_width=parent_width)
+    if verbose:
+      print('Running Small Model...')
+
+    status, numRollsUsed, consumed_big_rolls, unused_roll_widths = \
+              solve_model(demands=child_rolls, parent_width=parent_width, verbose=verbose)
 
     # convert the format of output of solve_model to be exactly same as solve_large_model
-    print('consumed_big_rolls before adjustment: ', consumed_big_rolls)
+    if verbose:
+      print('consumed_big_rolls before adjustment: ', consumed_big_rolls)
     new_consumed_big_rolls = []
     for big_roll in consumed_big_rolls:
       if len(big_roll) < 2:
         # sometimes the solve_model return a solution that contanis an extra [0.0] entry for big roll
         consumed_big_rolls.remove(big_roll)
         continue
-      unused_width = big_roll[0]
+      unused_width = round(big_roll[0])
       subrolls = []
       for subitem in big_roll[1:]:
         if isinstance(subitem, list):
@@ -394,17 +387,16 @@ def StockCutter1D(child_rolls, parent_rolls, output_json=True, large_model=True)
           # if it's an integer, add it to the list
           subrolls.append(subitem)
       new_consumed_big_rolls.append([unused_width, subrolls])
-    print('consumed_big_rolls after adjustment: ', new_consumed_big_rolls)
+    if verbose:
+      print('consumed_big_rolls after adjustment: ', new_consumed_big_rolls)
     consumed_big_rolls = new_consumed_big_rolls
   
   else:
-    print('Running Large Model...');
-    status, A, y, consumed_big_rolls = solve_large_model(demands=child_rolls, parent_width=parent_width)
+    if verbose:
+      print('Running Large Model...');
+    status, A, y, consumed_big_rolls = solve_large_model(demands=child_rolls, parent_width=parent_width, verbose=verbose)
 
   numRollsUsed = len(consumed_big_rolls)
-  # print('A:', A, '\n')
-  # print('y:', y, '\n')
-
 
   STATUS_NAME = ['OPTIMAL',
     'FEASIBLE',
@@ -412,52 +404,37 @@ def StockCutter1D(child_rolls, parent_rolls, output_json=True, large_model=True)
     'UNBOUNDED',
     'ABNORMAL',
     'NOT_SOLVED'
-    ]
+  ]
 
   output = {
       "statusName": STATUS_NAME[status],
-      "numSolutions": '1',
-      "numUniqueSolutions": '1',
+      "numSolutions": 1,
+      "numUniqueSolutions": 1,
       "numRollsUsed": numRollsUsed,
-      "solutions": consumed_big_rolls # unique solutions
+      "solutions": [consumed_big_rolls] # unique solutions
   }
 
+  if verbose:
+    print('numRollsUsed', numRollsUsed)
+    print('Status:', output['statusName'])
+    print('Solutions found :', output['numSolutions'])
+    print('Unique solutions: ', output['numUniqueSolutions'])
 
-  # print('Wall Time:', wall_time)
-  print('numRollsUsed', numRollsUsed)
-  print('Status:', output['statusName'])
-  print('Solutions found :', output['numSolutions'])
-  print('Unique solutions: ', output['numUniqueSolutions'])
-
-  if output_json:
-    return json.dumps(output)        
-  else:
-    return consumed_big_rolls
-
+  return json.dumps(output)
 
 
 if __name__ == '__main__':
-
-  # child_rolls = [
-  #    [quantity, width],
-  # ]
   app = typer.Typer()
 
+  def main(infile_name: str = typer.Argument(...), verbose: bool = typer.Option(False)):
+    read_data = get_data(infile_name)
+    roll_width = read_data[0]
+    child_rolls = read_data[1]
 
-  def main(infile_name: Optional[str] = typer.Argument(None)):
+    parent_rolls = [[1000, roll_width]] # 1000 doesn't matter, it is not used at the moment
 
-    if infile_name:
-      child_rolls = get_data(infile_name)
-    else:
-      child_rolls = gen_data(3)
-    parent_rolls = [[10, 120]] # 10 doesn't matter, itls not used at the moment
-
-    consumed_big_rolls = StockCutter1D(child_rolls, parent_rolls, output_json=False, large_model=False)
+    consumed_big_rolls = StockCutter1D(child_rolls, parent_rolls, verbose=verbose, large_model=False)
     typer.echo(f"{consumed_big_rolls}")
-
-
-    for idx, roll in enumerate(consumed_big_rolls):
-      typer.echo(f"Roll #{idx}:{roll}")
 
 if __name__ == "__main__":
   typer.run(main)

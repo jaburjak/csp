@@ -3,6 +3,7 @@ Original Author: Serge Kruk
 Original Version: https://github.com/sgkruk/Apress-AI/blob/master/cutting_stock.py
 
 Updated by: Emad Ehsan
+Updated by: Jakub Jabůrek
 '''
 from ortools.linear_solver import pywraplp
 from math import ceil

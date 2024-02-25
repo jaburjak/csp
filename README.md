@@ -1,25 +1,22 @@
 # Cutting Stock Problem
 
-Cutting Stock Problem (CSP) deals with planning the cutting of items (rods / sheets) from given stock items (which are usually of fixed size).
+Cutting Stock Problem (CSP) deals with planning the cutting of rods from given stock items.
 
 - This implementation of CSP tries to answer \
 _How to minimize number of stock items used while cutting customer order?_
-- While doing so, it also caters \
+- While doing so, it also optimizes for \
 _How to cut the stock for customer orders so that waste is minimum?_
 
 ## Quick start
 
-Install [Pipenv](https://pipenv.pypa.io/en/latest/), if not already installed.
-
-Clone this project and install packages:
+Clone this project and install required packages:
 
 ```sh
 $ git clone git@github.com:jaburjak/csp.git
 $ cd csp
-$ pipenv install
-
-# activate env
-$ pipenv shell
+$ python -m venv env
+$ source env/bin/activate
+$ pip install -r requirements.txt
 ```
 
 ## Usage
@@ -27,7 +24,7 @@ $ pipenv shell
 To solve your Cutting Stock Problem, run the `stock_cutter_1d.py` file:
 
 ```sh
-(csp) $ python csp/stock_cutter_1d.py infile.txt
+(env) $ python csp/stock_cutter_1d.py infile.txt
 ```
 
 Output:

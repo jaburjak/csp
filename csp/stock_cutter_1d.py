@@ -234,7 +234,7 @@ def solve_large_model(demands, parent_width=100, verbose=False):
       # add i-th cut of new pattern to i-thp pattern
       patterns[i].append(new_pattern[i])
 
-  status, y, l = solve_master(patterns, quantities, parent_width=parent_width, integer=True)  
+  status, y, l = solve_master(patterns, quantities, parent_width=parent_width, integer=True)
 
   return status, \
           patterns, \
@@ -434,9 +434,13 @@ if __name__ == '__main__':
     roll_width = read_data[0]
     child_rolls = read_data[1]
 
+    rolls_count = sum(map(lambda r: r[0], child_rolls))
+
+    use_large_model = True if rolls_count >= 45 else False
+
     parent_rolls = [[1000, roll_width]] # 1000 doesn't matter, it is not used at the moment
 
-    consumed_big_rolls = StockCutter1D(child_rolls, parent_rolls, verbose=verbose, large_model=False)
+    consumed_big_rolls = StockCutter1D(child_rolls, parent_rolls, verbose=verbose, large_model=use_large_model)
     typer.echo(f"{consumed_big_rolls}")
 
 if __name__ == "__main__":

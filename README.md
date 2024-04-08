@@ -48,6 +48,8 @@ Output:
 }
 ```
 
+You can use option ``--no-fast`` to use a more precise model (also slower) algorithm for calculation.
+
 ### Using the input file
 
 The first number in the input file must be the stock width followed by requested item widths. Numbers should be separated by whitespace.

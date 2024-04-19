@@ -4,7 +4,7 @@ import re
 from math import ceil
 
 """ Reads a file of numbers and returns a tuple of the first number and a list of (count, number) pairs."""
-def get_data(infile: str) -> tuple[float, List[float]]:
+def get_data(infile: str) -> tuple[float, List[tuple[int, float]]]:
     _p = pathlib.Path(infile)
     input_text = _p.read_text()
 
